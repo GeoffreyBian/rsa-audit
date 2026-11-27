@@ -1,0 +1,281 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RSA Audit</title>
+<style>
+  :root {
+    --bg: #f6f6f3; --card: #ffffff; --ink: #1b1b19; --muted: #6b6b66; --line: #e3e2dc;
+    --code: #f0efea;
+    --red: #b42318; --red-bg: #fdecea;
+    --amber: #a15c07; --amber-bg: #fdf3e2;
+    --green: #1d7a46; --green-bg: #e7f5ec;
+    --note: #4b5563; --note-bg: #eef0f2;
+    --accent: #1b1b19;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #141413; --card: #1d1d1b; --ink: #ecebe6; --muted: #9a9a93; --line: #2f2f2c;
+      --code: #2a2a27;
+      --red: #f97066; --red-bg: #3a1916;
+      --amber: #f5b14c; --amber-bg: #35270f;
+      --green: #4cc483; --green-bg: #142b1e;
+      --note: #b4bac2; --note-bg: #24272b;
+      --accent: #ecebe6;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font: 15px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  }
+  .wrap { max-width: 920px; margin: 0 auto; padding: 0 20px 64px; }
+  header {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    padding: 18px 0; border-bottom: 1px solid var(--line);
+  }
+  .brand { font-weight: 700; letter-spacing: -0.01em; display: flex; align-items: center; gap: 10px; }
+  .brand svg { width: 22px; height: 22px; }
+  .local { font-size: 13px; color: var(--muted); display: flex; align-items: center; gap: 14px; }
+  .dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--green); margin-right: 6px; }
+  button {
+    font: inherit; font-size: 14px; border-radius: 8px; padding: 7px 14px; cursor: pointer;
+    border: 1px solid var(--line); background: var(--card); color: var(--ink);
+  }
+  button.primary { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+  button:disabled { opacity: .5; cursor: default; }
+  h1 { font-size: 28px; line-height: 1.2; letter-spacing: -0.02em; margin: 36px 0 8px; }
+  .lede { color: var(--muted); margin: 0 0 24px; max-width: 640px; }
+
+  .tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 16px; }
+  .tile {
+    background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px;
+    text-align: left; cursor: pointer;
+  }
+  .tile .n { font-size: 34px; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; }
+  .tile .l { color: var(--muted); font-size: 13px; margin-top: 6px; }
+  .tile.fix .n { color: var(--red); } .tile.others .n { color: var(--amber); } .tile.safe .n { color: var(--green); }
+
+  .verdict { border-radius: 12px; padding: 14px 18px; margin-bottom: 28px; font-weight: 500; }
+  .verdict.fix { background: var(--red-bg); color: var(--red); }
+  .verdict.others { background: var(--amber-bg); color: var(--amber); }
+  .verdict.safe { background: var(--green-bg); color: var(--green); }
+
+  .sites {
+    background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px;
+    margin-bottom: 32px;
+  }
+  .sites label { font-weight: 600; display: block; margin-bottom: 2px; }
+  .sites .hint { color: var(--muted); font-size: 13px; margin: 0 0 10px; }
+  .sites .row { display: flex; gap: 8px; }
+  .sites input {
+    flex: 1; min-width: 0; font: inherit; padding: 7px 10px; border-radius: 8px;
+    border: 1px solid var(--line); background: var(--bg); color: var(--ink);
+  }
+
+  section { margin-bottom: 32px; }
+  section h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .06em; margin: 0 0 4px; }
+  section .sub { color: var(--muted); font-size: 13px; margin: 0 0 12px; }
+  section.fix h2 { color: var(--red); } section.others h2 { color: var(--amber); }
+  section.info h2 { color: var(--note); } section.safe h2 { color: var(--green); }
+
+  .card {
+    background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+    padding: 16px 18px; margin-bottom: 10px; border-left-width: 4px;
+  }
+  section.fix .card { border-left-color: var(--red); }
+  section.others .card { border-left-color: var(--amber); }
+  section.info .card { border-left-color: var(--line); }
+  section.safe .card { border-left-color: var(--green); padding: 12px 18px; }
+  .card .top { display: flex; gap: 10px; align-items: baseline; }
+  .chip {
+    font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .05em;
+    padding: 2px 7px; border-radius: 5px; background: var(--note-bg); color: var(--note); flex: none;
+  }
+  .card h3 { font-size: 15px; margin: 0; font-weight: 600; }
+  .card .why { color: var(--muted); margin: 8px 0 0; }
+  .todo { margin: 12px 0 0; padding: 12px 14px 12px 34px; background: var(--bg); border-radius: 8px; }
+  .todo li { margin: 4px 0; }
+  .todo-label { font-size: 12px; font-weight: 600; color: var(--muted); margin: 12px 0 -6px; }
+  code {
+    font: 13px ui-monospace, SFMono-Regular, Menlo, monospace; background: var(--code);
+    padding: 2px 6px; border-radius: 5px; word-break: break-all;
+  }
+  .copy { font-size: 12px; padding: 1px 7px; margin-left: 4px; border-radius: 5px; vertical-align: 1px; }
+  details { margin-top: 10px; }
+  summary { cursor: pointer; color: var(--muted); font-size: 13px; }
+  details ul { margin: 6px 0 0; padding-left: 18px; font-size: 13px; color: var(--muted); }
+
+  .touched {
+    background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 18px;
+  }
+  .touched h2 { font-size: 16px; margin: 0 0 4px; }
+  .touched .sub { color: var(--muted); font-size: 13px; margin: 0 0 14px; }
+  .facts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 14px; }
+  .fact { background: var(--bg); border-radius: 8px; padding: 10px 12px; }
+  .fact b { display: block; font-size: 18px; }
+  .fact span { font-size: 12px; color: var(--muted); }
+  .touched ul { margin: 4px 0 12px; padding-left: 18px; font: 12px ui-monospace, Menlo, monospace; color: var(--muted); }
+  .touched h4 { margin: 10px 0 0; font-size: 13px; }
+
+  .foot { color: var(--muted); font-size: 13px; margin-top: 28px; }
+  .center { text-align: center; padding: 80px 0; color: var(--muted); }
+  .spinner {
+    width: 28px; height: 28px; border: 3px solid var(--line); border-top-color: var(--ink);
+    border-radius: 50%; margin: 0 auto 14px; animation: spin .8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @media (max-width: 640px) {
+    .tiles, .facts { grid-template-columns: 1fr; }
+    h1 { font-size: 23px; }
+    .local .label { display: none; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M12 3l8 3v6c0 4.5-3.4 8.3-8 9-4.6-.7-8-4.5-8-9V6l8-3z"/><path d="M9 12l2 2 4-4"/>
+      </svg>
+      RSA Audit
+    </div>
+    <div class="local">
+      <span class="label"><span class="dot"></span>Running only on this Mac · read-only</span>
+      <button id="rescan">Scan again</button>
+      <button id="quit">Quit</button>
+    </div>
+  </header>
+
+  <h1>If RSA encryption broke tomorrow, what on this Mac would be exposed?</h1>
+  <p class="lede">RSA is the math behind many logins, signatures and website certificates.
+    This checks your SSH keys, GPG keys, Git signing and Keychain certificates, then tells you
+    what to do about anything that relies on it.</p>
+
+  <div id="main"><div class="center"><div class="spinner"></div>Scanning…</div></div>
+</div>
+
+<script>
+const token = location.hash.slice(1);
+const SECTIONS = [
+  ["fix", "Exposed — you can fix this", "Follow the steps on each card."],
+  ["others", "Exposed — someone else has to fix this", "A server, website or vendor needs to change. Here's what you can do meanwhile."],
+  ["info", "Good to know", ""],
+  ["safe", "Safe from an RSA break", "These use different math that a factoring breakthrough doesn't affect."],
+];
+let lastSites = "";
+
+function el(tag, attrs = {}, ...kids) {
+  const n = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (k === "class") n.className = v; else if (k === "onclick") n.onclick = v; else n.setAttribute(k, v);
+  }
+  for (const k of kids) if (k != null) n.append(k);
+  return n;
+}
+
+// Text with `backtick` spans becomes text + <code> + copy button. Never uses innerHTML.
+function rich(text) {
+  const frag = document.createDocumentFragment();
+  text.split(/(`[^`]+`)/).forEach(part => {
+    if (part.startsWith("`") && part.endsWith("`") && part.length > 2) {
+      const cmd = part.slice(1, -1);
+      const btn = el("button", { class: "copy", title: "Copy command" }, "Copy");
+      btn.onclick = () => navigator.clipboard.writeText(cmd).then(() => {
+        btn.textContent = "Copied"; setTimeout(() => (btn.textContent = "Copy"), 1200);
+      });
+      frag.append(el("code", {}, cmd), btn);
+    } else frag.append(part);
+  });
+  return frag;
+}
+
+function card(f) {
+  const c = el("div", { class: "card" },
+    el("div", { class: "top" }, el("span", { class: "chip" }, f.area), el("h3", {}, f.title)));
+  if (f.why) c.append(el("p", { class: "why" }, f.why));
+  if (f.fix.length) {
+    c.append(el("div", { class: "todo-label" }, f.severity === "fix" ? "What to do" : "What you can do"));
+    c.append(el("ol", { class: "todo" }, ...f.fix.map(s => el("li", {}, rich(s)))));
+  }
+  if (f.details.length) {
+    c.append(el("details", {}, el("summary", {}, `Show ${f.details.length} item${f.details.length > 1 ? "s" : ""}`),
+      el("ul", {}, ...f.details.map(d => el("li", {}, d)))));
+  }
+  return c;
+}
+
+function render(data) {
+  const s = data.summary, main = document.getElementById("main");
+  main.replaceChildren();
+
+  const tile = (cls, n, label) => el("button", { class: `tile ${cls}`, onclick: () =>
+    document.getElementById(`sec-${cls}`)?.scrollIntoView({ behavior: "smooth" }) },
+    el("div", { class: "n" }, String(n)), el("div", { class: "l" }, label));
+  main.append(el("div", { class: "tiles" },
+    tile("fix", s.fix, "to fix yourself"), tile("others", s.others, "others must fix"), tile("safe", s.safe, "safe")));
+
+  const [vcls, vtext] = s.fix ? ["fix", `You have ${s.fix} thing${s.fix > 1 ? "s" : ""} to fix. Each one below has step-by-step instructions.`]
+    : s.others ? ["others", "Nothing for you to fix on this Mac. A few things depend on others updating, so keep macOS and your browser up to date."]
+    : ["safe", "Nothing on this Mac relies on RSA. You're in good shape."];
+  main.append(el("div", { class: `verdict ${vcls}` }, vtext));
+
+  const input = el("input", { type: "text", placeholder: "github.com, mybank.com, canvas.ubc.ca", value: lastSites, "aria-label": "Websites" });
+  const go = el("button", { class: "primary" }, "Check sites");
+  go.onclick = () => { lastSites = input.value; scan(lastSites); };
+  input.addEventListener("keydown", e => e.key === "Enter" && go.click());
+  main.append(el("div", { class: "sites" },
+    el("label", {}, "Check websites you use"),
+    el("p", { class: "hint" }, "Optional. This is the only part that uses the internet: it connects to each site you list and reads its certificate."),
+    el("div", { class: "row" }, input, go)));
+
+  for (const [sev, heading, sub] of SECTIONS) {
+    const group = data.findings.filter(f => f.severity === sev);
+    if (!group.length) continue;
+    main.append(el("section", { class: sev, id: `sec-${sev}` },
+      el("h2", {}, heading), sub ? el("p", { class: "sub" }, sub) : null, ...group.map(card)));
+  }
+
+  const t = data.touched;
+  const list = (title, items) => [el("h4", {}, title),
+    el("ul", {}, ...(items.length ? items : ["none"]).map(i => el("li", {}, i)))];
+  main.append(el("div", { class: "touched" },
+    el("h2", {}, "What this scan looked at"),
+    el("p", { class: "sub" }, "Everything the scan read or ran, so you can check it stayed where it should. Private key files are read only for their public header; nothing secret is shown or stored."),
+    el("div", { class: "facts" },
+      el("div", { class: "fact" }, el("b", {}, "0"), el("span", {}, "changes made to your Mac")),
+      el("div", { class: "fact" }, el("b", {}, String(t.files_read.length + t.commands_run.length)), el("span", {}, "files read + read-only commands")),
+      el("div", { class: "fact" }, el("b", {}, String(t.network.length)), el("span", {}, "network connections"))),
+    ...list("Files read", t.files_read), ...list("Commands run", t.commands_run), ...list("Network", t.network)));
+
+  main.append(el("p", { class: "foot" }, "Ed25519 and elliptic-curve keys aren't affected by a factoring break. A large quantum computer would break those too; that's a separate, slower migration that's already underway."));
+}
+
+async function scan(sites = "") {
+  const main = document.getElementById("main");
+  document.getElementById("rescan").disabled = true;
+  main.replaceChildren(el("div", { class: "center" }, el("div", { class: "spinner" }),
+    sites ? "Scanning, including the websites you listed…" : "Scanning…"));
+  try {
+    const r = await fetch(`/api/scan?sites=${encodeURIComponent(sites)}`, { headers: { "X-Token": token } });
+    if (!r.ok) throw new Error(r.status === 403 ? "This page needs to be opened from the app. Relaunch RSA Audit." : `HTTP ${r.status}`);
+    render(await r.json());
+  } catch (e) {
+    main.replaceChildren(el("div", { class: "center" }, e.message.includes("fetch") ? "The app has stopped. Relaunch RSA Audit to scan again." : e.message));
+  } finally {
+    document.getElementById("rescan").disabled = false;
+  }
+}
+
+document.getElementById("rescan").onclick = () => scan(lastSites);
+document.getElementById("quit").onclick = async () => {
+  await fetch("/api/quit", { method: "POST", headers: { "X-Token": token } }).catch(() => {});
+  document.getElementById("main").replaceChildren(el("div", { class: "center" }, "RSA Audit has stopped. You can close this tab."));
+};
+setInterval(() => fetch("/api/heartbeat", { headers: { "X-Token": token } }).catch(() => {}), 15000);
+scan();
+</script>
+</body>
+</html>
